@@ -10,13 +10,13 @@ from .. import theme as T
 from .. import widgets as W
 from .base import Page
 
-SIZES = {"100.000 filas (rápido)": 100_000, "300.000 filas (recomendado)": 300_000,
+SIZES = {"100.000 filas (rápido, recomendado)": 100_000, "300.000 filas (equilibrado)": 300_000,
          "1.000.000 filas (Big Data)": 1_000_000}
 
 CODE = '''
-# Fuente original: API abierta de datos.gov.co (Socrata), paginada de 50.000 en 50.000
+# Fuente original: API abierta de datos.gov.co (Socrata), bloques de 10.000 filas repartidos por todo el dataset
 r = requests.get("https://www.datos.gov.co/resource/gt2j-8ykr.csv",
-                 params={"$limit": 50000, "$offset": offset, "$order": "id_de_caso"})
+                 params={"$limit": 10000, "$offset": offset, "$order": "id_de_caso"})
 '''
 
 
@@ -24,7 +24,7 @@ class DataPage(Page):
     key = "data"
 
     def build(self):
-        self.pad(W.title(self, "🎯  1 · Problema y conjunto de datos",
+        self.pad(W.title(self, "1 · Problema y conjunto de datos",
                          "Todo proyecto de Big Data empieza con una pregunta clara y datos que ayuden a responderla."),
                  pady=(24, 12))
 
@@ -48,8 +48,8 @@ class DataPage(Page):
             self, "¿Por qué este dataset es 'Big Data'?",
             "La fuente completa supera los 6,3 millones de registros con 23 columnas, datos reales y sucios "
             "(mayúsculas inconsistentes, 'N/A', fechas como texto). Es justo el tipo de volumen y calidad donde "
-            "Spark brilla: distribuye el trabajo entre los núcleos de tu PC y lo procesa en paralelo.",
-            icon="💡", color=T.ACCENT))
+            "Spark brilla: distribuye el trabajo entre los núcleos del equipo y lo procesa en paralelo.",
+            icon="", color=T.ACCENT))
 
         src = W.Card(self)
         self.pad(src)
@@ -63,11 +63,13 @@ class DataPage(Page):
         ctl = ctk.CTkFrame(src, fg_color="transparent")
         ctl.pack(fill="x", padx=18, pady=(0, 6))
         ctk.CTkLabel(ctl, text="Cantidad de filas a traer:", font=T.font(12), text_color=T.MUTED).pack(side="left")
-        self.size = ctk.CTkOptionMenu(ctl, values=list(SIZES), width=260, fg_color=T.CARD_ALT,
-                                      button_color=T.PRIMARY, font=T.font(12))
-        self.size.set("300.000 filas (recomendado)")
+        self.size = ctk.CTkOptionMenu(ctl, values=list(SIZES), width=260, fg_color=T.CARD, text_color=T.TEXT,
+                                      button_color=T.PRIMARY, button_hover_color=T.PRIMARY_HOVER,
+                                      dropdown_fg_color=T.CARD, dropdown_text_color=T.TEXT,
+                                      dropdown_hover_color=T.CARD_ALT, font=T.font(12))
+        self.size.set("300.000 filas (equilibrado)")
         self.size.pack(side="left", padx=10)
-        self.btn = W.button(ctl, "⬇ Descargar dataset", self.download, "accent", width=200)
+        self.btn = W.button(ctl, "Descargar dataset", self.download, "accent", width=200)
         self.btn.pack(side="left")
         self.bar = ctk.CTkProgressBar(src, height=10, progress_color=T.ACCENT, fg_color=T.CARD_ALT)
         self.bar.set(0)
@@ -93,7 +95,7 @@ class DataPage(Page):
             df = dataset.peek(8)
             self.table.fill(df[self.cols].values.tolist())
             n = sum(1 for _ in open(C.DATASET_CSV, "rb")) - 1
-            self.msg.configure(text=f"✔ Dataset local: {W.fmt(n)} filas listas para procesar.", text_color=T.GREEN)
+            self.msg.configure(text=f"Dataset local: {W.fmt(n)} filas listas para procesar.", text_color=T.GREEN)
 
     def download(self):
         n = SIZES[self.size.get()]
@@ -115,4 +117,4 @@ class DataPage(Page):
             self.app.refresh_status()
         elif event == "error":
             self.btn.configure(state="normal")
-            self.msg.configure(text=f"✖ {payload}", text_color=T.RED)
+            self.msg.configure(text=f"{payload}", text_color=T.RED)

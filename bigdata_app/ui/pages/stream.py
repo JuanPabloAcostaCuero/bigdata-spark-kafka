@@ -23,7 +23,7 @@ while True:
 CODE_STREAM = '''
 stream = (spark.readStream.format("kafka")
           .option("kafka.bootstrap.servers", "localhost:9092")
-          .option("subscribe", "casos_covid").load())              # ← consume el topic
+          .option("subscribe", "casos_covid").load())              # consume el topic
 
 events = stream.select(from_json(col("value").cast("string"), schema).alias("e")).select("e.*")
 
@@ -39,15 +39,15 @@ class StreamPage(Page):
         self.producer = Producer()
         self.job: Job | None = None
         self.kafka_ok = False
-        self.pad(W.title(self, "📡  3 · Tiempo real: Kafka + Spark Streaming",
+        self.pad(W.title(self, "3 · Tiempo real: Kafka + Spark Streaming",
                          "Un generador publica casos nuevos en un topic de Kafka; Spark los consume por micro-lotes y "
                          "actualiza estadísticas al instante."), pady=(24, 12))
         self.pad(W.concept(
             self, "La tubería en tiempo real",
-            "①  Productor (generador de datos)  →  ②  Topic de Kafka (cola de mensajes ordenada y durable)  →  "
-            "③  Spark Structured Streaming (lee el topic en micro-lotes de 3 s)  →  ④  Resultados en este panel.\n"
+            "Productor (generador de datos)  →  Topic de Kafka (cola de mensajes ordenada y durable)  →  "
+            "Spark Structured Streaming (lee el topic en micro-lotes de 3 s)  →  Resultados en este panel.\n"
             "Kafka desacopla a quien genera datos de quien los procesa: si Spark se detiene, los mensajes esperan en el topic.",
-            icon="🔀", color=T.PURPLE))
+            icon="", color=T.PURPLE))
 
         # -------------------------------------------------- pasos de control
         steps = ctk.CTkFrame(self, fg_color="transparent")
@@ -56,43 +56,43 @@ class StreamPage(Page):
 
         c1 = W.Card(steps)
         c1.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
-        self._head(c1, "①", "Broker y topic de Kafka")
+        self._head(c1, "1", "Broker y topic de Kafka")
         self.lbl_kafka = ctk.CTkLabel(c1, text="Detenido", font=T.font(12, "bold"), text_color=T.RED)
         self.lbl_kafka.pack(anchor="w", padx=16)
-        self.btn_kafka = W.button(c1, "▶ Iniciar Kafka + topic", self.start_kafka, "primary", width=210)
+        self.btn_kafka = W.button(c1, "Iniciar Kafka + topic", self.start_kafka, "primary", width=210)
         self.btn_kafka.pack(anchor="w", padx=16, pady=(8, 4))
-        self.btn_kafka_stop = W.button(c1, "■ Detener Kafka", self.stop_kafka, "ghost", width=210)
+        self.btn_kafka_stop = W.button(c1, "Detener Kafka", self.stop_kafka, "ghost", width=210)
         self.btn_kafka_stop.pack(anchor="w", padx=16, pady=(0, 14))
 
         c2 = W.Card(steps)
         c2.grid(row=0, column=1, sticky="nsew", padx=6)
-        self._head(c2, "②", "Generador de datos")
+        self._head(c2, "2", "Generador de datos")
         self.lbl_rate = ctk.CTkLabel(c2, text="Velocidad: 5 eventos/seg", font=T.font(12), text_color=T.MUTED)
         self.lbl_rate.pack(anchor="w", padx=16)
         self.slider = ctk.CTkSlider(c2, from_=1, to=50, number_of_steps=49, progress_color=T.ACCENT,
                                     button_color=T.ACCENT, command=self._rate)
         self.slider.set(5)
         self.slider.pack(fill="x", padx=16, pady=6)
-        self.btn_prod = W.button(c2, "▶ Iniciar generador", self.toggle_producer, "primary", width=210)
+        self.btn_prod = W.button(c2, "Iniciar generador", self.toggle_producer, "primary", width=210)
         self.btn_prod.pack(anchor="w", padx=16, pady=(4, 14))
 
         c3 = W.Card(steps)
         c3.grid(row=0, column=2, sticky="nsew", padx=(6, 0))
-        self._head(c3, "③", "Spark Streaming")
+        self._head(c3, "3", "Spark Streaming")
         self.lbl_spark = ctk.CTkLabel(c3, text="Detenido", font=T.font(12, "bold"), text_color=T.RED)
         self.lbl_spark.pack(anchor="w", padx=16)
-        self.btn_spark = W.button(c3, "▶ Iniciar Spark Streaming", self.toggle_spark, "accent", width=210)
+        self.btn_spark = W.button(c3, "Iniciar Spark Streaming", self.toggle_spark, "accent", width=210)
         self.btn_spark.pack(anchor="w", padx=16, pady=(8, 14))
 
-        self.bar = ctk.CTkProgressBar(self, height=8, progress_color=T.PURPLE, fg_color=T.CARD_ALT)
+        self.bar = ctk.CTkProgressBar(self, height=8, progress_color=T.PRIMARY, fg_color=T.CARD_ALT)
         self.bar.set(0)
         self.pad(self.bar, pady=(0, 6))
-        self.msg = ctk.CTkLabel(self, text="Sigue los pasos ① → ② → ③. La primera vez Spark descarga el conector de Kafka (~1 min).",
+        self.msg = ctk.CTkLabel(self, text="Siga los pasos 1, 2 y 3 en orden. La primera vez Spark descarga el conector de Kafka (~1 min).",
                                 font=T.font(12), text_color=T.MUTED, anchor="w")
         self.pad(self.msg, pady=(0, 10))
 
         # ------------------------------------------------------------ panel
-        ctk.CTkLabel(self, text="④  Panel en tiempo real", font=T.font(18, "bold"), text_color=T.TEXT, anchor="w").grid(
+        ctk.CTkLabel(self, text="Panel en tiempo real", font=T.font(18, "bold"), text_color=T.TEXT, anchor="w").grid(
             column=0, padx=28, pady=(6, 8), sticky="w")
         kp = ctk.CTkFrame(self, fg_color="transparent")
         self.pad(kp)
@@ -127,17 +127,17 @@ class StreamPage(Page):
         code = ctk.CTkFrame(self, fg_color="transparent")
         self.pad(code)
         code.columnconfigure((0, 1), weight=1, uniform="c")
-        W.CodeBox(code, CODE_PRODUCER, height=110, label="💻 Productor (Kafka)").grid(row=0, column=0, sticky="nsew", padx=(0, 6))
-        W.CodeBox(code, CODE_STREAM, height=110, label="💻 Consumidor (Spark Streaming)").grid(row=0, column=1, sticky="nsew", padx=(6, 0))
-        self.console = W.Console(self, height=120, label="📟 Registro de Spark / Kafka")
+        W.CodeBox(code, CODE_PRODUCER, height=110, label="Productor (Kafka)").grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        W.CodeBox(code, CODE_STREAM, height=110, label="Consumidor (Spark Streaming)").grid(row=0, column=1, sticky="nsew", padx=(6, 0))
+        self.console = W.Console(self, height=120, label="Registro de Spark / Kafka")
         self.pad(self.console)
         self._empty_charts()
 
     def _head(self, card, num, text):
         row = ctk.CTkFrame(card, fg_color="transparent")
         row.pack(fill="x", padx=16, pady=(14, 6))
-        ctk.CTkLabel(row, text=num, font=T.font(16, "bold"), text_color="white", fg_color=T.PURPLE,
-                     corner_radius=14, width=28, height=28).pack(side="left")
+        ctk.CTkLabel(row, text=num, font=T.font(16, "bold"), text_color="white", fg_color=T.PRIMARY,
+                     corner_radius=4, width=28, height=28).pack(side="left")
         ctk.CTkLabel(row, text=text, font=T.font(14, "bold"), text_color=T.TEXT).pack(side="left", padx=10)
 
     def _rate(self, v):
@@ -148,9 +148,9 @@ class StreamPage(Page):
     def start_kafka(self):
         d = runtime.diagnose()
         if not (d["java"] and d["kafka_files"]):
-            self.msg.configure(text="⚠ Falta Java o Kafka: instálalos en la pestaña Entorno.", text_color=T.YELLOW)
+            self.msg.configure(text="Falta Java o Kafka: instálalos en la pestaña Entorno.", text_color=T.YELLOW)
             return
-        self.btn_kafka.configure(state="disabled", text="⏳ Iniciando…")
+        self.btn_kafka.configure(state="disabled", text="Iniciando…")
 
         def work():
             runtime.start_kafka(lambda m, f: self.bus.put("stream:progress", (m, f)))
@@ -172,36 +172,36 @@ class StreamPage(Page):
         self.kafka_ok = up
         self.lbl_kafka.configure(text="En línea · 127.0.0.1:9092" if up else "Detenido",
                                  text_color=T.GREEN if up else T.RED)
-        self.btn_kafka.configure(state="normal", text="▶ Iniciar Kafka + topic")
+        self.btn_kafka.configure(state="normal", text="Iniciar Kafka + topic")
 
     # ------------------------------------------------------------ productor
     def toggle_producer(self, force_stop=False):
         if self.producer.running or force_stop:
             self.producer.stop()
-            self.btn_prod.configure(text="▶ Iniciar generador", fg_color=T.PRIMARY, hover_color=T.PRIMARY_HOVER)
+            self.btn_prod.configure(text="Iniciar generador", fg_color=T.PRIMARY, hover_color=T.PRIMARY_HOVER)
             return
         if not runtime.kafka_running():
-            self.msg.configure(text="⚠ Inicia Kafka primero (paso ①).", text_color=T.YELLOW)
+            self.msg.configure(text="Inicia Kafka primero (paso ).", text_color=T.YELLOW)
             return
         self.producer.start(int(self.slider.get()))
-        self.btn_prod.configure(text="■ Detener generador", fg_color=T.RED, hover_color="#D94453")
+        self.btn_prod.configure(text="Detener generador", fg_color=T.RED, hover_color="#D94453")
 
     # ---------------------------------------------------------------- Spark
     def toggle_spark(self):
         if self.job and self.job.running:
             self.job.stop()
             self.lbl_spark.configure(text="Detenido", text_color=T.RED)
-            self.btn_spark.configure(text="▶ Iniciar Spark Streaming", fg_color=T.ACCENT)
+            self.btn_spark.configure(text="Iniciar Spark Streaming", fg_color=T.ACCENT)
             return
         if not runtime.kafka_running():
-            self.msg.configure(text="⚠ Inicia Kafka primero (paso ①).", text_color=T.YELLOW)
+            self.msg.configure(text="Inicia Kafka primero (paso ).", text_color=T.YELLOW)
             return
         self._last = None
         C.STREAM_STATE.unlink(missing_ok=True)
         shutil.rmtree(C.STREAM_CHECKPOINT, ignore_errors=True)
         self.console.clear()
         self.lbl_spark.configure(text="Arrancando…", text_color=T.YELLOW)
-        self.btn_spark.configure(text="■ Detener Spark", fg_color=T.RED)
+        self.btn_spark.configure(text="Detener Spark", fg_color=T.RED)
         self.job = Job([str(C.JOBS_DIR / "stream_job.py"), C.KAFKA_BOOTSTRAP, C.KAFKA_TOPIC, str(C.STREAM_STATE),
                         str(C.STREAM_CHECKPOINT), C.SPARK_KAFKA_PACKAGE], self.bus, "stream")
         self.job.start()
@@ -214,12 +214,12 @@ class StreamPage(Page):
         elif event == "kafka_ok":
             self._kafka_label()
             self.bar.set(1)
-            self.msg.configure(text=f"✔ {payload}", text_color=T.GREEN)
+            self.msg.configure(text=f"{payload}", text_color=T.GREEN)
             self.console.write(payload)
             self.app.refresh_status()
         elif event == "kafka_err":
             self._kafka_label()
-            self.msg.configure(text=f"✖ {payload}", text_color=T.RED)
+            self.msg.configure(text=f"{payload}", text_color=T.RED)
         elif event == "line":
             if payload.startswith("@@READY"):
                 self.lbl_spark.configure(text="Conectando…", text_color=T.YELLOW)
@@ -231,7 +231,7 @@ class StreamPage(Page):
                 self.console.write(payload[:180])
         elif event == "exit":
             self.lbl_spark.configure(text="Detenido", text_color=T.RED)
-            self.btn_spark.configure(text="▶ Iniciar Spark Streaming", fg_color=T.ACCENT)
+            self.btn_spark.configure(text="Iniciar Spark Streaming", fg_color=T.ACCENT)
             self.console.write(f"Spark Streaming finalizó (código {payload}).")
 
     def on_show(self):
@@ -240,7 +240,7 @@ class StreamPage(Page):
     def tick(self):
         self.kpis["sent"].set(W.fmt(self.producer.sent))
         if self.producer.error:
-            self.msg.configure(text=f"✖ Generador: {self.producer.error}", text_color=T.RED)
+            self.msg.configure(text=f"Generador: {self.producer.error}", text_color=T.RED)
         if not C.STREAM_STATE.exists():
             return
         try:

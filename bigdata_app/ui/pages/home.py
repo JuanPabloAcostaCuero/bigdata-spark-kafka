@@ -1,4 +1,4 @@
-"""Pantalla de inicio: mapa del proyecto y progreso."""
+"""Pantalla de inicio: descripción del trabajo y estado de cada etapa."""
 from __future__ import annotations
 
 import customtkinter as ctk
@@ -8,12 +8,15 @@ from .. import theme as T
 from .. import widgets as W
 from .base import Page
 
-CARDS = [
-    ("env", "🛠️", "Entorno", "Verifica e instala Java, Hadoop (Windows) y Kafka con un clic.", T.MUTED),
-    ("data", "🎯", "1 · Problema y datos", "Define la pregunta y descarga el dataset real de Datos Abiertos de Colombia.", T.PRIMARY),
-    ("batch", "⚙️", "2 · Procesamiento batch", "Carga, limpieza, EDA con DataFrames/RDDs y gráficas con PySpark.", T.ACCENT),
-    ("stream", "📡", "3 · Tiempo real", "Kafka + Spark Streaming: generador, consumo, análisis y panel en vivo.", T.PURPLE),
-    ("learn", "🎓", "Aprende", "Glosario ilustrado de Big Data, Spark y Kafka.", T.GREEN),
+STEPS = [
+    ("env", "0", "Preparación del entorno",
+     "Instalación y verificación de Java, Hadoop para Windows y Apache Kafka (guía del Anexo 3)."),
+    ("data", "1", "Problema y conjunto de datos",
+     "Definición del problema y descarga del dataset desde Datos Abiertos de Colombia."),
+    ("batch", "2", "Procesamiento en batch",
+     "Carga, limpieza, transformación, análisis exploratorio (RDD y DataFrames) y visualización."),
+    ("stream", "3", "Procesamiento en tiempo real",
+     "Topic de Kafka con generador de datos, aplicación Spark Streaming, análisis y visualización."),
 ]
 
 
@@ -21,42 +24,39 @@ class HomePage(Page):
     key = "home"
 
     def build(self):
-        hero = ctk.CTkFrame(self, fg_color=T.CARD_ALT, corner_radius=18, border_width=1, border_color=T.BORDER)
-        self.pad(hero, pady=(24, 16))
-        ctk.CTkLabel(hero, text="BIG DATA DIDÁCTICO", font=T.font(11, "bold"), text_color=T.ACCENT).pack(
-            anchor="w", padx=28, pady=(24, 0))
-        ctk.CTkLabel(hero, text="Aprende Spark y Kafka procesando datos reales", font=T.font(30, "bold"),
-                     text_color=T.TEXT, wraplength=820, justify="left").pack(anchor="w", padx=28, pady=(2, 6))
-        ctk.CTkLabel(hero, font=T.font(14), text_color=T.MUTED, wraplength=820, justify="left",
-                     text="Un recorrido guiado en tres pasos: define un problema, analiza un dataset de gran volumen "
-                          "en batch y construye una tubería en tiempo real. Cada pantalla explica qué ocurre y "
-                          "muestra el código PySpark que se ejecuta.").pack(anchor="w", padx=28, pady=(0, 22))
-
-        self.status_labels = {}
-        grid = ctk.CTkFrame(self, fg_color="transparent")
-        self.pad(grid)
-        grid.columnconfigure((0, 1), weight=1, uniform="h")
-        for i, (key, icon, name, desc, color) in enumerate(CARDS):
-            card = W.Card(grid, cursor="hand2")
-            card.grid(row=i // 2, column=i % 2, sticky="nsew", padx=6, pady=6)
-            ctk.CTkLabel(card, text=icon, font=T.font(28)).pack(anchor="w", padx=18, pady=(16, 0))
-            ctk.CTkLabel(card, text=name, font=T.font(16, "bold"), text_color=T.TEXT).pack(anchor="w", padx=18)
-            ctk.CTkLabel(card, text=desc, font=T.font(12), text_color=T.MUTED, wraplength=330, justify="left").pack(
-                anchor="w", padx=18, pady=(2, 8))
-            st = ctk.CTkLabel(card, text="", font=T.font(11, "bold"), text_color=color)
-            st.pack(anchor="w", padx=18, pady=(0, 6))
-            self.status_labels[key] = st
-            W.button(card, "Abrir →", lambda k=key: self.app.show(k), "ghost", width=110).pack(
-                anchor="w", padx=18, pady=(0, 16))
+        self.pad(W.title(self, "Procesamiento de datos de gran volumen con Apache Spark y Kafka",
+                         f"{C.COURSE}  ·  {C.STUDENT}"), pady=(24, 14))
 
         self.pad(W.concept(
-            self, "Cómo se relaciona con la actividad",
-            "①  Definición del problema y selección del dataset  →  pantalla «1 · Problema y datos».\n"
-            "②  Implementación en Spark (Python), procesamiento en batch (carga, limpieza/transformación/EDA con "
-            "RDDs o DataFrames, visualización)  →  pantalla «2 · Procesamiento batch».\n"
-            "③  Procesamiento en tiempo real (topic de Kafka con generador de datos, aplicación Spark Streaming que "
-            "consume el topic, análisis y visualización en vivo)  →  pantalla «3 · Tiempo real».",
-            icon="🧭", color=T.GREEN))
+            self, "Descripción del trabajo",
+            "Aplicación desarrollada en Python que implementa el componente práctico de la actividad: se selecciona un "
+            "problema, se procesa un conjunto de datos de gran volumen en batch con Spark (PySpark) y, después, se "
+            "simula la llegada de datos en tiempo real mediante un topic de Kafka consumido por Spark Streaming."))
+
+        ctk.CTkLabel(self, text="Etapas del trabajo", font=T.font(14, "bold"), text_color=T.TEXT, anchor="w").grid(
+            column=0, padx=28, pady=(6, 6), sticky="w")
+        self.status_labels = {}
+        for key, num, name, desc in STEPS:
+            row = W.Card(self)
+            self.pad(row, pady=(0, 8))
+            row.columnconfigure(1, weight=1)
+            ctk.CTkLabel(row, text=num, width=44, height=44, font=T.font(18, "bold"), text_color="white",
+                         fg_color=T.PRIMARY, corner_radius=T.RADIUS).grid(row=0, column=0, rowspan=2, padx=14, pady=14)
+            ctk.CTkLabel(row, text=name, font=T.font(14, "bold"), text_color=T.TEXT, anchor="w").grid(
+                row=0, column=1, sticky="sw", pady=(12, 0))
+            ctk.CTkLabel(row, text=desc, font=T.font(12), text_color=T.MUTED, anchor="w", justify="left",
+                         wraplength=560).grid(row=1, column=1, sticky="nw", pady=(0, 12))
+            st = ctk.CTkLabel(row, text="", font=T.font(11, "bold"), text_color=T.MUTED, width=170, anchor="e")
+            st.grid(row=0, column=2, rowspan=2, padx=8)
+            self.status_labels[key] = st
+            W.button(row, "Abrir", lambda k=key: self.app.show(k), "ghost", width=90).grid(
+                row=0, column=3, rowspan=2, padx=(0, 14))
+
+        self.pad(W.concept(
+            self, "Tecnologías utilizadas",
+            "Python 3.12 · PySpark 4 (RDD, DataFrames y Spark SQL) · Spark Structured Streaming · Apache Kafka 3.7 "
+            "(modo KRaft) · kafka-python · CustomTkinter y Matplotlib para la interfaz y las gráficas.",
+            color=T.MUTED), pady=(6, 14))
 
     def on_show(self):
         self.refresh()
@@ -67,8 +67,12 @@ class HomePage(Page):
         d = runtime.diagnose()
         env_ok = d["java"] and d["kafka_files"] and d["winutils"]
         s = self.status_labels
-        s["env"].configure(text="✔ Entorno listo" if env_ok else "● Falta instalar componentes")
-        s["data"].configure(text="✔ Dataset descargado" if d["dataset"] else "● Dataset pendiente")
-        s["batch"].configure(text="✔ Resultados disponibles" if C.BATCH_RESULT.exists() else "● Sin ejecutar")
-        s["stream"].configure(text="✔ Kafka en línea" if d["kafka_running"] else "● Kafka detenido")
-        s["learn"].configure(text="Glosario y conceptos")
+        s["env"].configure(text="Completo" if env_ok else "Pendiente", text_color=T.GREEN if env_ok else T.YELLOW)
+        s["data"].configure(text="Dataset descargado" if d["dataset"] else "Pendiente",
+                            text_color=T.GREEN if d["dataset"] else T.YELLOW)
+        done = C.BATCH_RESULT.exists()
+        s["batch"].configure(text="Con resultados" if done else "Sin ejecutar",
+                             text_color=T.GREEN if done else T.YELLOW)
+        up = d["kafka_running"]
+        s["stream"].configure(text="Kafka en línea" if up else "Kafka detenido",
+                              text_color=T.GREEN if up else T.MUTED)

@@ -16,7 +16,7 @@ STEPS = ["Iniciar Spark", "Cargar CSV", "Limpiar", "EDA", "RDDs", "Guardar"]
 CODE_LOAD = '''
 spark = SparkSession.builder.master("local[*]").appName("Batch").getOrCreate()
 
-raw = spark.read.option("header", True).csv("covid_colombia.csv")   # ← carga desde la fuente original
+raw = spark.read.option("header", True).csv("covid_colombia.csv")   # carga desde la fuente original
 raw.printSchema()          # estructura (todo llega como texto)
 raw.count()                # ACCIÓN: aquí Spark realmente lee los datos
 '''
@@ -48,9 +48,9 @@ class BatchPage(Page):
     def build(self):
         self.job: Job | None = None
         self.res: dict | None = None
-        self.pad(W.title(self, "⚙️  2 · Procesamiento en batch",
+        self.pad(W.title(self, "2 · Procesamiento en batch",
                          "Cargar → Limpiar → Explorar (EDA) → Visualizar. Spark procesa el archivo completo de una vez, "
-                         "repartido entre los núcleos de tu equipo."), pady=(24, 12))
+                         "repartido entre los núcleos del equipo."), pady=(24, 12))
         self.pad(W.concept(
             self, "Procesamiento batch vs. tiempo real",
             "En batch los datos ya existen (un archivo, una tabla) y se procesan juntos, de principio a fin. "
@@ -59,7 +59,7 @@ class BatchPage(Page):
 
         bar = ctk.CTkFrame(self, fg_color="transparent")
         self.pad(bar)
-        self.btn = W.button(bar, "▶ Ejecutar procesamiento batch", self.run, "accent", width=270)
+        self.btn = W.button(bar, "Ejecutar procesamiento batch", self.run, "accent", width=270)
         self.btn.pack(side="left")
         self.status = ctk.CTkLabel(bar, text="", font=T.font(12), text_color=T.MUTED)
         self.status.pack(side="left", padx=14)
@@ -75,9 +75,12 @@ class BatchPage(Page):
         self.console = W.Console(self, height=110)
         self.pad(self.console)
 
-        self.tabs = ctk.CTkTabview(self, fg_color=T.BG, segmented_button_fg_color=T.CARD,
+        self.tabs = ctk.CTkTabview(self, fg_color=T.BG, segmented_button_fg_color=T.BORDER,
                                    segmented_button_selected_color=T.PRIMARY,
-                                   segmented_button_unselected_color=T.CARD, height=900)
+                                   segmented_button_selected_hover_color=T.PRIMARY_HOVER,
+                                   segmented_button_unselected_color="#6B7F9E",
+                                   segmented_button_unselected_hover_color="#58698A",
+                                   text_color="white", height=900)
         self.pad(self.tabs)
         for name in ("1 · Carga", "2 · Limpieza", "3 · EDA", "4 · Gráficas"):
             self.tabs.add(name)
@@ -119,7 +122,7 @@ class BatchPage(Page):
                                       ("Filas descartadas", T.RED), ("Columnas nuevas", T.PURPLE)])
         W.concept(p, "Por qué limpiamos", "Los datos reales llegan con errores: 'LEVE', 'leve' y 'Leve' son la misma "
                   "categoría; 'N/A' no es un valor; las fechas vienen como texto. Si no las normalizamos, los conteos "
-                  "salen mal.", icon="🧹", color=T.GREEN).pack(fill="x", pady=(0, 10))
+                  "salen mal.", icon="", color=T.GREEN).pack(fill="x", pady=(0, 10))
         W.CodeBox(p, CODE_CLEAN, height=135).pack(fill="x", pady=(0, 10))
         self.t_clean = W.Table(p, ["Paso de limpieza", "Antes", "Después", "Afectadas"], height=4,
                                widths=[360, 100, 100, 100])
@@ -154,29 +157,30 @@ class BatchPage(Page):
         ctk.CTkLabel(p, text="Visualización de resultados", font=T.font(15, "bold"), text_color=T.TEXT).pack(
             anchor="w", pady=(4, 6))
         self.seg = ctk.CTkSegmentedButton(p, values=CHARTS, command=self.draw_chart, font=T.font(11),
-                                          selected_color=T.ACCENT, selected_hover_color="#E5732A",
-                                          unselected_color=T.CARD, fg_color=T.CARD)
+                                          selected_color=T.ACCENT, selected_hover_color="#A04E14",
+                                          unselected_color="#6B7F9E", unselected_hover_color="#58698A",
+                                          fg_color=T.BORDER, text_color="white")
         self.seg.pack(fill="x", pady=(0, 10))
         self.chart = W.Chart(p, height=380)
         self.chart.pack(fill="x")
         self.insight = W.concept(p, "Cómo leer esta gráfica", "Ejecuta el procesamiento para ver resultados.",
-                                 icon="🔎", color=T.ACCENT)
+                                 icon="", color=T.ACCENT)
         self.insight.pack(fill="x", pady=10)
         self._insight_lbl = self.insight.winfo_children()[1].winfo_children()[1]
 
     # ---------------------------------------------------------- ejecución
     def run(self):
         if not C.DATASET_CSV.exists():
-            self.status.configure(text="⚠ Primero descarga el dataset (paso 1).", text_color=T.YELLOW)
+            self.status.configure(text="Primero descarga el dataset (paso 1).", text_color=T.YELLOW)
             return
         from ...engine import runtime
         if not (runtime.find_java_home() and runtime.has_pyspark()):
-            self.status.configure(text="⚠ Falta Java o PySpark: abre la pestaña Entorno.", text_color=T.YELLOW)
+            self.status.configure(text="Falta Java o PySpark: abre la pestaña Entorno.", text_color=T.YELLOW)
             return
         self.console.clear()
         for c in self.chips:
             c.configure(fg_color=T.CARD_ALT, text_color=T.MUTED)
-        self.btn.configure(state="disabled", text="⏳ Procesando…")
+        self.btn.configure(state="disabled", text="Procesando…")
         self.status.configure(text="Spark está trabajando (la 1ª vez tarda ~20 s en arrancar)…", text_color=T.MUTED)
         C.BATCH_RESULT.unlink(missing_ok=True)
         self.job = Job([str(C.JOBS_DIR / "batch_job.py"), str(C.DATASET_CSV), str(C.BATCH_RESULT)], self.bus, "batch")
@@ -193,22 +197,22 @@ class BatchPage(Page):
                         c.configure(fg_color="#1B5E46", text_color="white")
                     elif j == i:
                         c.configure(fg_color=T.ACCENT, text_color="white")
-                self.console.write(f"▸ {msg}")
+                self.console.write(f"{msg}")
             elif line.startswith("@@"):
                 self.console.write(line[2:])
             elif "ERROR" in line or "Traceback" in line or "Exception" in line:
                 self.console.write(line[:200])
         elif event == "exit":
-            self.btn.configure(state="normal", text="▶ Ejecutar procesamiento batch")
+            self.btn.configure(state="normal", text="Ejecutar procesamiento batch")
             if payload == 0 and C.BATCH_RESULT.exists():
                 for c in self.chips:
                     c.configure(fg_color="#1B5E46", text_color="white")
                 self._load_saved()
-                self.status.configure(text=f"✔ Listo en {self.res['elapsed_s']} s — revisa las pestañas.",
+                self.status.configure(text=f"Listo en {self.res['elapsed_s']} s — revisa las pestañas.",
                                       text_color=T.GREEN)
                 self.app.refresh_status()
             else:
-                self.status.configure(text="✖ El procesamiento falló: revisa el registro.", text_color=T.RED)
+                self.status.configure(text="El procesamiento falló: revisa el registro.", text_color=T.RED)
 
     # ---------------------------------------------------------- resultados
     def _load_saved(self):

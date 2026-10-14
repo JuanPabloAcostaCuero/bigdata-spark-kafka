@@ -23,7 +23,7 @@ class EnvPage(Page):
     key = "env"
 
     def build(self):
-        self.pad(W.title(self, "🛠️  Entorno de trabajo",
+        self.pad(W.title(self, "Entorno de trabajo",
                          "Antes de procesar datos necesitamos Java, Spark y Kafka. Aquí los verificas e instalas "
                          "con un clic — todo se descarga a una carpeta de usuario, sin permisos de administrador."),
                  pady=(24, 12))
@@ -38,7 +38,7 @@ class EnvPage(Page):
         for key, name, desc, _ in REQS:
             row = ctk.CTkFrame(card, fg_color="transparent")
             row.pack(fill="x", padx=16, pady=8)
-            dot = ctk.CTkLabel(row, text="●", font=T.font(18), text_color=T.MUTED, width=24)
+            dot = ctk.CTkLabel(row, text="", fg_color=T.MUTED, width=12, height=12, corner_radius=2)
             dot.pack(side="left")
             txt = ctk.CTkFrame(row, fg_color="transparent")
             txt.pack(side="left", padx=8)
@@ -50,9 +50,9 @@ class EnvPage(Page):
 
         actions = ctk.CTkFrame(self, fg_color="transparent")
         self.pad(actions)
-        self.btn_all = W.button(actions, "⬇ Instalar lo que falta", self.install_missing, "accent", width=220)
+        self.btn_all = W.button(actions, "Instalar lo que falta", self.install_missing, "accent", width=220)
         self.btn_all.pack(side="left")
-        W.button(actions, "↻ Volver a comprobar", self.refresh, "ghost", width=190).pack(side="left", padx=10)
+        W.button(actions, "Volver a comprobar", self.refresh, "ghost", width=190).pack(side="left", padx=10)
 
         self.bar = ctk.CTkProgressBar(self, height=10, progress_color=T.ACCENT, fg_color=T.CARD_ALT)
         self.bar.set(0)
@@ -69,7 +69,7 @@ class EnvPage(Page):
         d = runtime.diagnose()
         for key, (dot, st) in self.rows.items():
             ok = d.get(key, False)
-            dot.configure(text_color=T.GREEN if ok else T.RED)
+            dot.configure(fg_color=T.GREEN if ok else T.RED)
             st.configure(text="Listo" if ok else "Falta", text_color=T.GREEN if ok else T.RED)
         self.app.refresh_status()
 
@@ -88,7 +88,7 @@ class EnvPage(Page):
         d = runtime.diagnose()
         steps = [fn for key, _, _, fn in REQS if fn and not d.get(key)]
         if not steps:
-            self.console.write("✔ Todo lo necesario ya está instalado.")
+            self.console.write("Todo lo necesario ya está instalado.")
             return
         self._install(steps)
 
@@ -99,8 +99,8 @@ class EnvPage(Page):
             self.console.write(msg) if frac in (0, 1) or int(frac * 100) % 25 == 0 else None
         elif event == "done":
             self.btn_all.configure(state="normal")
-            self.console.write("✔ Instalación completada.")
+            self.console.write("Instalación completada.")
             self.refresh()
         elif event == "error":
             self.btn_all.configure(state="normal")
-            self.console.write(f"✖ Error: {payload}")
+            self.console.write(f"Error: {payload}")

@@ -1,4 +1,4 @@
-"""Componentes reutilizables: tarjetas, KPIs, consola, código, tablas y gráficas."""
+"""Componentes reutilizables: paneles, indicadores, consola, código, tablas y gráficas."""
 from __future__ import annotations
 
 from tkinter import ttk
@@ -15,9 +15,11 @@ from . import theme as T  # noqa: E402
 
 
 class Card(ctk.CTkFrame):
+    """Panel plano con borde fino."""
+
     def __init__(self, master, **kw):
         kw.setdefault("fg_color", T.CARD)
-        kw.setdefault("corner_radius", 14)
+        kw.setdefault("corner_radius", T.RADIUS)
         kw.setdefault("border_width", 1)
         kw.setdefault("border_color", T.BORDER)
         super().__init__(master, **kw)
@@ -25,46 +27,47 @@ class Card(ctk.CTkFrame):
 
 def title(master, text, sub=None):
     box = ctk.CTkFrame(master, fg_color="transparent")
-    ctk.CTkLabel(box, text=text, font=T.font(26, "bold"), text_color=T.TEXT, anchor="w").pack(anchor="w")
+    ctk.CTkLabel(box, text=text, font=T.font(22, "bold"), text_color=T.PRIMARY, anchor="w").pack(anchor="w")
     if sub:
-        ctk.CTkLabel(box, text=sub, font=T.font(13), text_color=T.MUTED, anchor="w",
+        ctk.CTkLabel(box, text=sub, font=T.font(12), text_color=T.MUTED, anchor="w",
                      justify="left", wraplength=900).pack(anchor="w", pady=(2, 0))
+    ctk.CTkFrame(box, height=2, fg_color=T.PRIMARY, corner_radius=0).pack(fill="x", pady=(10, 0))
     return box
 
 
-def concept(master, heading, body, icon="📘", color=T.PRIMARY):
-    """Caja didáctica 'Qué está pasando aquí'."""
-    card = Card(master, fg_color=T.CARD_ALT)
-    bar = ctk.CTkFrame(card, width=5, height=10, fg_color=color, corner_radius=3)
-    bar.pack(side="left", fill="y", padx=(10, 0), pady=10)
+def concept(master, heading, body, color=T.PRIMARY, **_):
+    """Recuadro explicativo: qué está ocurriendo en esta parte del proceso."""
+    card = ctk.CTkFrame(master, fg_color=T.CARD_ALT, corner_radius=T.RADIUS)
+    ctk.CTkFrame(card, width=4, height=10, fg_color=color, corner_radius=0).pack(side="left", fill="y")
     inner = ctk.CTkFrame(card, fg_color="transparent")
-    inner.pack(side="left", fill="both", expand=True, padx=12, pady=10)
-    ctk.CTkLabel(inner, text=f"{icon}  {heading}", font=T.font(14, "bold"), text_color=T.TEXT,
-                 anchor="w").pack(anchor="w")
+    inner.pack(side="left", fill="both", expand=True, padx=14, pady=10)
+    ctk.CTkLabel(inner, text=heading, font=T.font(12, "bold"), text_color=T.TEXT, anchor="w").pack(anchor="w")
     ctk.CTkLabel(inner, text=body, font=T.font(12), text_color=T.MUTED, anchor="w",
-                 justify="left", wraplength=820).pack(anchor="w", pady=(3, 0))
+                 justify="left", wraplength=840).pack(anchor="w", pady=(3, 0))
     return card
 
 
 def button(master, text, command, kind="primary", width=170, **kw):
     colors = {
-        "primary": (T.PRIMARY, T.PRIMARY_HOVER),
-        "accent": (T.ACCENT, "#E5732A"),
-        "green": ("#1FAF7C", "#188A62"),
-        "danger": (T.RED, "#D94453"),
-        "ghost": (T.CARD_ALT, T.BORDER),
+        "primary": (T.PRIMARY, T.PRIMARY_HOVER, "white"),
+        "accent": (T.ACCENT, "#A04E14", "white"),
+        "green": (T.GREEN, "#22604A", "white"),
+        "danger": (T.RED, "#8C2D23", "white"),
+        "ghost": (T.CARD, T.CARD_ALT, T.TEXT),
     }[kind]
-    return ctk.CTkButton(master, text=text, command=command, width=width, height=38, corner_radius=10,
-                         fg_color=colors[0], hover_color=colors[1], font=T.font(13, "bold"), **kw)
+    extra = {"border_width": 1, "border_color": T.BORDER} if kind == "ghost" else {}
+    return ctk.CTkButton(master, text=text, command=command, width=width, height=34, corner_radius=T.RADIUS,
+                         fg_color=colors[0], hover_color=colors[1], text_color=colors[2],
+                         font=T.font(12, "bold"), **extra, **kw)
 
 
 class Kpi(Card):
     def __init__(self, master, label, value="—", color=T.PRIMARY, **kw):
         super().__init__(master, **kw)
-        self._label = ctk.CTkLabel(self, text=label.upper(), font=T.font(10, "bold"), text_color=T.MUTED)
-        self._label.pack(anchor="w", padx=16, pady=(12, 0))
-        self._value = ctk.CTkLabel(self, text=value, font=T.font(26, "bold"), text_color=color)
-        self._value.pack(anchor="w", padx=16, pady=(0, 12))
+        self._label = ctk.CTkLabel(self, text=label, font=T.font(11), text_color=T.MUTED)
+        self._label.pack(anchor="w", padx=14, pady=(10, 0))
+        self._value = ctk.CTkLabel(self, text=value, font=T.font(24, "bold"), text_color=color)
+        self._value.pack(anchor="w", padx=14, pady=(0, 10))
 
     def set(self, value):
         self._value.configure(text=value)
@@ -73,11 +76,11 @@ class Kpi(Card):
 class CodeBox(ctk.CTkFrame):
     """Muestra el código PySpark/Kafka que se está ejecutando."""
 
-    def __init__(self, master, code: str, height=150, label="💻 Código que se ejecuta"):
-        super().__init__(master, fg_color=T.CODE_BG, corner_radius=12, border_width=1, border_color=T.BORDER)
-        ctk.CTkLabel(self, text=label, font=T.font(11, "bold"), text_color=T.ACCENT, anchor="w").pack(
-            anchor="w", padx=14, pady=(8, 0))
-        self.box = ctk.CTkTextbox(self, height=height, fg_color=T.CODE_BG, text_color="#C9D6F2",
+    def __init__(self, master, code: str, height=150, label="Código que se ejecuta"):
+        super().__init__(master, fg_color=T.CODE_BG, corner_radius=T.RADIUS, border_width=1, border_color=T.BORDER)
+        ctk.CTkLabel(self, text=label, font=T.font(11, "bold"), text_color=T.MUTED, anchor="w").pack(
+            anchor="w", padx=12, pady=(8, 0))
+        self.box = ctk.CTkTextbox(self, height=height, fg_color=T.CODE_BG, text_color=T.CODE_TEXT,
                                   font=T.mono(12), wrap="none", border_width=0)
         self.box.pack(fill="both", expand=True, padx=6, pady=(0, 6))
         self.set(code)
@@ -90,11 +93,11 @@ class CodeBox(ctk.CTkFrame):
 
 
 class Console(ctk.CTkFrame):
-    def __init__(self, master, height=150, label="📟 Registro"):
-        super().__init__(master, fg_color=T.CODE_BG, corner_radius=12, border_width=1, border_color=T.BORDER)
-        ctk.CTkLabel(self, text=label, font=T.font(11, "bold"), text_color=T.GREEN, anchor="w").pack(
-            anchor="w", padx=14, pady=(8, 0))
-        self.box = ctk.CTkTextbox(self, height=height, fg_color=T.CODE_BG, text_color="#9FE8C0",
+    def __init__(self, master, height=150, label="Registro de ejecución"):
+        super().__init__(master, fg_color=T.CONSOLE_BG, corner_radius=T.RADIUS)
+        ctk.CTkLabel(self, text=label, font=T.font(11, "bold"), text_color="#8FA3C4", anchor="w").pack(
+            anchor="w", padx=12, pady=(8, 0))
+        self.box = ctk.CTkTextbox(self, height=height, fg_color=T.CONSOLE_BG, text_color=T.CONSOLE_TEXT,
                                   font=T.mono(11), border_width=0, wrap="word")
         self.box.pack(fill="both", expand=True, padx=6, pady=(0, 6))
         self.box.configure(state="disabled")
@@ -113,15 +116,15 @@ class Console(ctk.CTkFrame):
 
 class Table(ctk.CTkFrame):
     def __init__(self, master, columns: Sequence[str], height=8, widths: Sequence[int] | None = None):
-        super().__init__(master, fg_color=T.CARD, corner_radius=12, border_width=1, border_color=T.BORDER)
+        super().__init__(master, fg_color=T.CARD, corner_radius=T.RADIUS, border_width=1, border_color=T.BORDER)
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=height)
         for i, c in enumerate(columns):
             self.tree.heading(c, text=c)
             self.tree.column(c, width=(widths[i] if widths else 120), anchor="w", stretch=True)
         sb = ttk.Scrollbar(self, orient="horizontal", command=self.tree.xview)
         self.tree.configure(xscrollcommand=sb.set)
-        self.tree.pack(fill="both", expand=True, padx=6, pady=(6, 0))
-        sb.pack(fill="x", padx=6, pady=(0, 6))
+        self.tree.pack(fill="both", expand=True, padx=4, pady=(4, 0))
+        sb.pack(fill="x", padx=4, pady=(0, 4))
 
     def fill(self, rows: Iterable[Sequence]):
         self.tree.delete(*self.tree.get_children())
@@ -130,10 +133,10 @@ class Table(ctk.CTkFrame):
 
 
 class Chart(ctk.CTkFrame):
-    """Lienzo matplotlib con estilo oscuro; ``draw(fn)`` recibe un Axes limpio."""
+    """Lienzo matplotlib; ``draw(fn)`` recibe un Axes limpio."""
 
     def __init__(self, master, height=300):
-        super().__init__(master, fg_color=T.CARD, corner_radius=12, border_width=1, border_color=T.BORDER)
+        super().__init__(master, fg_color=T.CARD, corner_radius=T.RADIUS, border_width=1, border_color=T.BORDER)
         self.fig = Figure(figsize=(6, height / 100), dpi=100, facecolor=T.CARD)
         self.ax = self.fig.add_subplot(111)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
@@ -152,7 +155,7 @@ class Chart(ctk.CTkFrame):
         ax.title.set_color(T.TEXT)
         ax.xaxis.label.set_color(T.MUTED)
         ax.yaxis.label.set_color(T.MUTED)
-        ax.grid(axis="y", color=T.BORDER, alpha=0.5, linewidth=0.6)
+        ax.grid(axis="y", color=T.BORDER, alpha=0.8, linewidth=0.6)
         ax.set_axisbelow(True)
 
     def draw(self, fn, title_text=""):
@@ -160,14 +163,14 @@ class Chart(ctk.CTkFrame):
         fn(self.ax)
         self._style()
         if title_text:
-            self.ax.set_title(title_text, fontsize=11, fontweight="bold", color=T.TEXT, loc="left", pad=10)
+            self.ax.set_title(title_text, fontsize=10, fontweight="bold", color=T.TEXT, loc="left", pad=10)
         self.fig.tight_layout()
         self.canvas.draw_idle()
 
 
 def hbar(ax, labels, values, color=T.PRIMARY):
     ax.barh(list(labels)[::-1], list(values)[::-1], color=color)
-    ax.grid(axis="x", color=T.BORDER, alpha=0.5, linewidth=0.6)
+    ax.grid(axis="x", color=T.BORDER, alpha=0.8, linewidth=0.6)
     ax.grid(axis="y", visible=False)
 
 

@@ -15,12 +15,12 @@ from .pages.learn import LearnPage
 from .pages.stream import StreamPage
 
 NAV = [
-    ("home", "🏠", "Inicio"),
-    ("env", "🛠️", "Entorno"),
-    ("data", "🎯", "1 · Problema y datos"),
-    ("batch", "⚙️", "2 · Batch (Spark)"),
-    ("stream", "📡", "3 · Tiempo real"),
-    ("learn", "🎓", "Aprende"),
+    ("home", "Inicio"),
+    ("env", "0.  Entorno"),
+    ("data", "1.  Problema y datos"),
+    ("batch", "2.  Procesamiento batch"),
+    ("stream", "3.  Tiempo real"),
+    ("learn", "Glosario"),
 ]
 
 
@@ -57,35 +57,34 @@ class App(ctk.CTk):
 
     # ----------------------------------------------------------- estructura
     def _sidebar(self):
-        sb = ctk.CTkFrame(self, width=250, fg_color=T.SIDEBAR, corner_radius=0)
+        sb = ctk.CTkFrame(self, width=240, fg_color=T.SIDEBAR, corner_radius=0)
         sb.grid(row=0, column=0, sticky="nsw")
         sb.grid_propagate(False)
-        ctk.CTkLabel(sb, text="⚡ Big Data", font=T.font(22, "bold"), text_color=T.TEXT).pack(
-            anchor="w", padx=22, pady=(26, 0))
-        ctk.CTkLabel(sb, text="Didáctico · Spark + Kafka", font=T.font(11), text_color=T.MUTED).pack(
-            anchor="w", padx=22, pady=(0, 22))
+        ctk.CTkLabel(sb, text="Big Data", font=T.font(20, "bold"), text_color="white").pack(
+            anchor="w", padx=20, pady=(24, 0))
+        ctk.CTkLabel(sb, text="Spark y Kafka con Python", font=T.font(11), text_color=T.SIDEBAR_TEXT).pack(
+            anchor="w", padx=20, pady=(0, 18))
+        ctk.CTkFrame(sb, height=1, fg_color=T.SIDEBAR_HOVER).pack(fill="x", padx=20, pady=(0, 10))
         self.nav = {}
-        for key, icon, label in NAV:
-            b = ctk.CTkButton(sb, text=f"  {icon}   {label}", anchor="w", height=42, corner_radius=10,
-                              font=T.font(13, "bold"), fg_color="transparent", text_color=T.MUTED,
-                              hover_color=T.CARD, command=lambda k=key: self.show(k))
-            b.pack(fill="x", padx=12, pady=2)
+        for key, label in NAV:
+            b = ctk.CTkButton(sb, text=label, anchor="w", height=38, corner_radius=4,
+                              font=T.font(13), fg_color="transparent", text_color=T.SIDEBAR_TEXT,
+                              hover_color=T.SIDEBAR_HOVER, command=lambda k=key: self.show(k))
+            b.pack(fill="x", padx=12, pady=1)
             self.nav[key] = b
-        self.status_box = ctk.CTkFrame(sb, fg_color=T.CARD, corner_radius=12)
-        self.status_box.pack(side="bottom", fill="x", padx=12, pady=16)
+        status = ctk.CTkFrame(sb, fg_color="transparent")
+        status.pack(side="bottom", fill="x", padx=20, pady=18)
+        ctk.CTkLabel(status, text="ESTADO", font=T.font(10, "bold"), text_color=T.SIDEBAR_TEXT).pack(anchor="w")
         self.dots = {}
         for key, label in (("java", "Java"), ("kafka_running", "Kafka"), ("dataset", "Dataset")):
-            row = ctk.CTkFrame(self.status_box, fg_color="transparent")
-            row.pack(fill="x", padx=12, pady=(8 if key == "java" else 2, 8 if key == "dataset" else 0))
-            dot = ctk.CTkLabel(row, text="●", font=T.font(14), text_color=T.RED, width=20)
-            dot.pack(side="left")
-            ctk.CTkLabel(row, text=label, font=T.font(12), text_color=T.TEXT).pack(side="left")
-            self.dots[key] = dot
+            lbl = ctk.CTkLabel(status, text=label, font=T.font(12), text_color=T.SIDEBAR_TEXT, anchor="w")
+            lbl.pack(anchor="w", pady=(4, 0))
+            self.dots[key] = (lbl, label)
 
     def show(self, key: str):
         for k, b in self.nav.items():
-            b.configure(fg_color=T.CARD_ALT if k == key else "transparent",
-                        text_color=T.TEXT if k == key else T.MUTED)
+            b.configure(fg_color=T.PRIMARY if k == key else "transparent",
+                        text_color="white" if k == key else T.SIDEBAR_TEXT)
         for k, page in self.pages.items():
             if k != key:
                 page.grid_remove()
@@ -95,8 +94,10 @@ class App(ctk.CTk):
 
     def refresh_status(self):
         d = runtime.diagnose()
-        for key, dot in self.dots.items():
-            dot.configure(text_color=T.GREEN if d[key] else T.RED)
+        for key, (lbl, name) in self.dots.items():
+            ok = d[key]
+            lbl.configure(text=f"{name}:  {'listo' if ok else 'pendiente'}",
+                          text_color="#7FD4A8" if ok else "#F0A59C")
 
     # --------------------------------------------------------------- bucle
     def _pump(self):

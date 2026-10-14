@@ -1,6 +1,6 @@
-# ⚡ Big Data Didáctico — Spark + Kafka (100 % Python)
+# Procesamiento de Big Data con Spark y Kafka (100 % Python)
 
-Aplicación de escritorio para Windows, con interfaz moderna (CustomTkinter) y enfoque didáctico, que cubre la actividad:
+Aplicación de escritorio para Windows, con interfaz gráfica (CustomTkinter) y enfoque didáctico, que cubre la actividad:
 
 | Requisito de la actividad | Dónde está en la app |
 |---|---|
@@ -38,7 +38,8 @@ bigdata_app/
 
 ## Notas técnicas
 - Los trabajos de Spark corren como subprocesos para no congelar la interfaz.
-- Spark usa la ruta corta 8.3 de Python y Kafka vive en `~/.bdk` porque los `.bat` fallan con rutas largas o con espacios.
+- Spark usa la ruta corta 8.3 de Python y Kafka vive en `~/.bdk`: los `.bat` fallan con rutas largas o con espacios.
 - Kafka usa `127.0.0.1` (en Windows `localhost` resuelve primero a IPv6 y el cliente falla).
-- La primera vez, Spark Streaming descarga el conector `spark-sql-kafka` desde Maven (~1–2 min).
-- Limitación conocida: en algunos equipos Windows el *worker* de Python de Spark se cierra, por lo que el ejemplo con RDD puede fallar; la app lo informa y continúa con DataFrames.
+- El worker de Python de Spark se lanza con un script propio (`engine/runtime.py`, `worker_launcher`): con `python -m pyspark.worker` los RDD fallaban de forma intermitente en Windows.
+- La primera vez, Spark Streaming descarga el conector `spark-sql-kafka` desde Maven (1-2 min).
+- El procesamiento batch de 300.000 filas tarda de 1 a 3 minutos según el equipo.

@@ -14,8 +14,11 @@ from pyspark.sql import SparkSession, functions as F
 from pyspark.sql.types import IntegerType
 
 
+T0 = time.time()
+
+
 def step(n: int, msg: str) -> None:
-    print(f"@@STEP {n}|{msg}", flush=True)
+    print(f"@@STEP {n}|{msg}  (t={time.time() - T0:.0f}s)", flush=True)
 
 
 def rows(df, limit=None):
@@ -31,7 +34,8 @@ def main(csv_path: str, out_path: str) -> None:
     spark = (
         SparkSession.builder.master("local[*]")
         .appName("BigDataDidactico-Batch")
-        .config("spark.sql.shuffle.partitions", "8")
+        .config("spark.driver.memory", "3g")
+        .config("spark.sql.shuffle.partitions", "4")
         .config("spark.sql.ansi.enabled", "false")
         .config("spark.ui.showConsoleProgress", "false")
         .getOrCreate()
@@ -67,20 +71,28 @@ def main(csv_path: str, out_path: str) -> None:
 
     df = raw
     # (a) Duplicados por id de caso
-    before = df.count()
-    df = df.dropDuplicates(["id_de_caso"])
-    log("Eliminar casos duplicados (id_de_caso)", before, df.count())
+    before = n_raw
+    df = df.dropDuplicates(["id_de_caso"]).cache()
+    n_cur = df.count()
+    log("Eliminar casos duplicados (id_de_caso)", before, n_cur)
 
     # (b) Normalizar categorías (mayúsculas/minúsculas, N/A -> nulo)
     def norm(col):
         c = F.initcap(F.trim(F.col(col)))
         return F.when(F.upper(c).isin("N/A", "NA", "NAN", ""), None).otherwise(c)
 
-    distinct_before = {c: df.select(c).distinct().count() for c in ("estado", "ubicacion", "recuperado")}
+    cat_cols = ("estado", "ubicacion", "recuperado")
+
+    def distinct_counts(frame):
+        row = frame.agg(*[F.countDistinct(c).alias(c) for c in cat_cols]).first()
+        return {c: int(row[c]) for c in cat_cols}
+
+    distinct_before = distinct_counts(df)
     for col in ("estado", "ubicacion", "fuente_tipo_contagio", "recuperado", "tipo_recuperacion"):
         df = df.withColumn(col, norm(col))
-    for c, nb in distinct_before.items():
-        log(f"Unificar categorías de '{c}' (valores distintos)", nb, df.select(c).distinct().count())
+    distinct_after = distinct_counts(df)
+    for c in cat_cols:
+        log(f"Unificar categorías de '{c}' (valores distintos)", distinct_before[c], distinct_after[c])
     df = df.withColumn("sexo", F.upper(F.trim(F.col("sexo"))))
     df = df.withColumn("sexo", F.when(F.col("sexo").isin("M", "F"), F.col("sexo")))
     df = df.withColumn("departamento_nom", F.upper(F.trim(F.col("departamento_nom"))))
@@ -101,12 +113,13 @@ def main(csv_path: str, out_path: str) -> None:
         df = df.withColumn(c, F.to_timestamp(F.col(c)))
 
     # (d) Edades imposibles
-    before = df.count()
-    df = df.filter(F.col("edad_anios").isNull() | F.col("edad_anios").between(0, 110))
-    log("Descartar edades imposibles (>110 años)", before, df.count())
+    before = n_cur
+    df = df.filter(F.col("edad_anios").isNull() | F.col("edad_anios").between(0, 110)).cache()
+    n_cur = df.count()
+    log("Descartar edades imposibles (>110 años)", before, n_cur)
 
     # (e) Registros sin sexo o sin fecha de notificación no sirven para el análisis
-    before = df.count()
+    before = n_cur
     df = df.dropna(subset=["sexo", "fecha_de_notificaci_n", "departamento_nom"])
     log("Eliminar filas sin sexo / fecha / departamento", before, df.count())
 
@@ -159,9 +172,13 @@ def main(csv_path: str, out_path: str) -> None:
 
     # --------------------------------------------------------------- 4. RDD
     step(5, "Ejemplo con RDDs: map → reduceByKey (conteo por departamento)…")
+    t_rdd = time.time()
     try:
-        rdd = df.select("departamento_nom").rdd.map(lambda r: (r[0], 1)).reduceByKey(lambda a, b: a + b)
+        # Pocas particiones: en Windows cada tarea Python arranca un proceso nuevo.
+        rdd = (df.select("departamento_nom").rdd.coalesce(2)
+               .map(lambda r: (r[0], 1)).reduceByKey(lambda a, b: a + b, numPartitions=2))
         res["rdd_top"] = [{"k": k, "n": n} for k, n in rdd.takeOrdered(5, key=lambda kv: -kv[1])]
+        print(f"@@INFO RDD listo en {time.time() - t_rdd:.0f} s", flush=True)
     except Exception as exc:  # noqa: BLE001  (los workers Python pueden fallar en algunos Windows)
         res["rdd_top"] = []
         res["rdd_error"] = str(exc).splitlines()[0][:200]

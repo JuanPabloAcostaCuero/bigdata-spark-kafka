@@ -96,6 +96,47 @@ def diagnose() -> dict:
     }
 
 
+_WORKER_PY = """import os
+import time
+from pyspark import worker as w
+
+# Worker de Spark para Windows. `python -m pyspark.worker` se cierra de forma
+# intermitente (condición de carrera entre la JVM y el worker); una pausa de
+# unos milisegundos tras cada lectura del protocolo lo evita.
+_read_int = w.read_int
+
+
+_reads = [0]
+
+
+def read_int(stream):
+    value = _read_int(stream)
+    if _reads[0] < 40:  # el arranque del protocolo es lo sensible
+        _reads[0] += 1
+        time.sleep(0.01)
+    return value
+
+
+w.read_int = read_int
+sock_file, _ = w.local_connect_and_auth(
+    int(os.environ["PYTHON_WORKER_FACTORY_PORT"]), os.environ["PYTHON_WORKER_FACTORY_SECRET"])
+w.write_int(os.getpid(), sock_file)
+sock_file.flush()
+w.main(sock_file, sock_file)
+"""
+
+
+def worker_launcher(py: str) -> str:
+    """Crea (si hace falta) un .bat que arranca el worker de Python de Spark."""
+    script = C.RUNTIME_DIR / "pyworker.py"
+    script.write_text(_WORKER_PY, encoding="utf-8")
+    bat = C.RUNTIME_DIR / "pyworker.bat"
+    crlf = chr(13) + chr(10)
+    text = '@echo off' + crlf + f'"{py}" "{short_path(str(script))}"' + crlf
+    bat.write_bytes(text.encode('ascii'))
+    return short_path(str(bat))
+
+
 def spark_env() -> dict:
     """Variables de entorno para lanzar PySpark como subproceso."""
     env = os.environ.copy()
@@ -109,7 +150,7 @@ def spark_env() -> dict:
     # Spark lanza sus workers con scripts .cmd: las rutas con espacios/guiones
     # (p. ej. "Unad - Juan Pablo") los rompen, así que usamos la ruta corta 8.3.
     py = short_path(C.PYTHON)
-    env["PYSPARK_PYTHON"] = py
+    env["PYSPARK_PYTHON"] = worker_launcher(py)
     env["PYSPARK_DRIVER_PYTHON"] = py
     env["PYTHONIOENCODING"] = "utf-8"
     env["PYTHONUTF8"] = "1"
