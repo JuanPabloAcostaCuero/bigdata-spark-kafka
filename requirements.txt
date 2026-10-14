@@ -1,0 +1,9 @@
+pyspark==4.0.1
+customtkinter>=5.2
+kafka-python==2.2.15
+pandas>=2.2
+matplotlib>=3.9
+numpy
+pillow
+requests
+psutil
