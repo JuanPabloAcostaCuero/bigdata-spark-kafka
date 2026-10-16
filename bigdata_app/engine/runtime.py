@@ -301,3 +301,31 @@ def ensure_topic(topic: str = C.KAFKA_TOPIC, partitions: int = 1) -> str:
         return f"El topic '{topic}' ya existía."
     finally:
         admin.close()
+
+
+def _kill_port_owner(port: int) -> None:
+    """Cierra el proceso que escucha en ``port`` (p. ej. un Kafka que quedó abierto)."""
+    out = subprocess.run(["netstat", "-ano", "-p", "TCP"], capture_output=True, text=True,
+                         encoding="utf-8", errors="replace", creationflags=_NO_WINDOW).stdout
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) >= 5 and parts[3] == "LISTENING" and parts[1].endswith(f":{port}"):
+            subprocess.run(["taskkill", "/PID", parts[4], "/T", "/F"], capture_output=True, creationflags=_NO_WINDOW)
+
+
+def fresh_start() -> None:
+    """Cada vez que se abre la aplicación el trabajo empieza desde cero.
+
+    Se borran dataset, resultados del batch, estado del streaming y el topic de Kafka.
+    Java, Hadoop, Kafka y el conector de Spark (descargas pesadas) se conservan.
+    """
+    import shutil
+
+    if kafka_running():
+        _kill_port_owner(9092)
+        _kill_port_owner(9093)
+        time.sleep(2)
+    for f in (C.BATCH_RESULT, C.STREAM_STATE, C.DATASET_CSV, C.DATASET_CSV.with_suffix(".part")):
+        f.unlink(missing_ok=True)
+    shutil.rmtree(C.STREAM_CHECKPOINT, ignore_errors=True)
+    shutil.rmtree(C.RUNTIME_DIR / "kafka-data", ignore_errors=True)

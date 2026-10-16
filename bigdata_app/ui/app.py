@@ -31,7 +31,7 @@ class App(ctk.CTk):
         self.geometry("1280x820")
         self.minsize(1080, 700)
         self.bus = Bus()
-        C.STREAM_STATE.unlink(missing_ok=True)  # el panel en vivo arranca en cero
+        runtime.fresh_start()  # cada apertura empieza el trabajo desde cero
         self.current = None
 
         self.grid_columnconfigure(1, weight=1)
