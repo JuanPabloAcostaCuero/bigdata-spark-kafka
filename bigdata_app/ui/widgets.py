@@ -31,7 +31,7 @@ def title(master, text, sub=None):
     if sub:
         ctk.CTkLabel(box, text=sub, font=T.font(12), text_color=T.MUTED, anchor="w",
                      justify="left", wraplength=900).pack(anchor="w", pady=(2, 0))
-    ctk.CTkFrame(box, height=2, fg_color=T.PRIMARY, corner_radius=0).pack(fill="x", pady=(10, 0))
+    ctk.CTkFrame(box, height=3, fg_color=T.YELLOW_UNAD, corner_radius=0).pack(fill="x", pady=(10, 0))
     return box
 
 
@@ -50,7 +50,7 @@ def concept(master, heading, body, color=T.PRIMARY, **_):
 def button(master, text, command, kind="primary", width=170, **kw):
     colors = {
         "primary": (T.PRIMARY, T.PRIMARY_HOVER, "white"),
-        "accent": (T.ACCENT, "#A04E14", "white"),
+        "accent": (T.ACCENT, "#B56A08", "white"),
         "green": (T.GREEN, "#22604A", "white"),
         "danger": (T.RED, "#8C2D23", "white"),
         "ghost": (T.CARD, T.CARD_ALT, T.TEXT),

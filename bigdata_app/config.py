@@ -50,5 +50,5 @@ KAFKA_BOOTSTRAP = "127.0.0.1:9092"
 KAFKA_TOPIC = "casos_covid"
 
 # Datos del trabajo (se muestran en la pantalla de inicio)
-STUDENT = "Juan Pablo"
-COURSE = "Big Data · UNAD"
+STUDENT = "Juan Pablo Acosta Cuero"
+COURSE = "Big Data · Universidad Nacional Abierta y a Distancia (UNAD)"

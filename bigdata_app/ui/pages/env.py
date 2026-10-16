@@ -88,6 +88,7 @@ class EnvPage(Page):
         d = runtime.diagnose()
         steps = [fn for key, _, _, fn in REQS if fn and not d.get(key)]
         if not steps:
+            self.console.clear()
             self.console.write("Todo lo necesario ya está instalado.")
             return
         self._install(steps)

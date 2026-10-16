@@ -5,28 +5,29 @@ from tkinter import ttk
 
 import customtkinter as ctk
 
-BG = "#F3F5F9"          # fondo de la ventana
-SIDEBAR = "#10294F"
-SIDEBAR_HOVER = "#1A3B6E"
-SIDEBAR_TEXT = "#C9D4E8"
+BG = "#F4F6FA"          # fondo de la ventana
+SIDEBAR = "#06356B"
+SIDEBAR_HOVER = "#0E4A8E"
+SIDEBAR_TEXT = "#D3E1F3"
 CARD = "#FFFFFF"
 CARD_ALT = "#E9EEF6"
 BORDER = "#D3DAE6"
 TEXT = "#1C2434"
 MUTED = "#5A6579"
-PRIMARY = "#1F4E9C"
-PRIMARY_HOVER = "#173D7D"
-ACCENT = "#C1601A"       # naranja apagado (Spark)
+PRIMARY = "#0B5AA8"
+PRIMARY_HOVER = "#084884"
+ACCENT = "#D9820B"       # naranja institucional
 GREEN = "#2D7A58"
 RED = "#B03A2E"
 YELLOW = "#A8741A"
 PURPLE = "#5C5190"
+YELLOW_UNAD = "#F7B500"
 CODE_BG = "#F0F3F8"
 CODE_TEXT = "#1F2A44"
 CONSOLE_BG = "#1B2231"
 CONSOLE_TEXT = "#B9E3C8"
 
-CHART_COLORS = [PRIMARY, ACCENT, GREEN, PURPLE, YELLOW, RED, "#3C8DA8", "#8A8F9B"]
+CHART_COLORS = [PRIMARY, "#F29A12", GREEN, "#3C8DA8", PURPLE, RED, "#8A8F9B", YELLOW]
 
 FONT = "Segoe UI"
 RADIUS = 6
