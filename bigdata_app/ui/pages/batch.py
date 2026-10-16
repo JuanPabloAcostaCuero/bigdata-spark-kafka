@@ -1,7 +1,9 @@
 """Pantalla 2: Procesamiento en batch con PySpark (carga, limpieza, EDA y gráficas)."""
 from __future__ import annotations
 
+import csv
 import json
+from tkinter import filedialog
 
 import customtkinter as ctk
 
@@ -42,25 +44,24 @@ CHARTS = ["Casos por mes", "Departamentos", "Ciudades", "Sexo", "Grupos de edad"
           "Tipo de contagio", "Estado del caso"]
 
 
+class _NoText:
+    def configure(self, *a, **k):
+        pass
+
+
 class BatchPage(Page):
     key = "batch"
 
     def build(self):
         self.job: Job | None = None
         self.res: dict | None = None
-        self.pad(W.title(self, "2 · Procesamiento en batch",
-                         "Cargar → Limpiar → Explorar (EDA) → Visualizar. Spark procesa el archivo completo de una vez, "
-                         "repartido entre los núcleos del equipo."), pady=(24, 12))
-        self.pad(W.concept(
-            self, "Procesamiento batch vs. tiempo real",
-            "En batch los datos ya existen (un archivo, una tabla) y se procesan juntos, de principio a fin. "
-            "Spark es perezoso: las transformaciones (filter, withColumn, groupBy) solo describen un plan; no se ejecuta "
-            "nada hasta una acción (count, show, collect). Así puede optimizar todo el plan antes de correrlo."))
+        self.pad(W.title(self, "2 · Procesamiento en batch"), pady=(24, 12))
 
         bar = ctk.CTkFrame(self, fg_color="transparent")
         self.pad(bar)
         self.btn = W.button(bar, "Ejecutar procesamiento batch", self.run, "accent", width=270)
         self.btn.pack(side="left")
+        self.btn_next = W.button(bar, "Continuar: Tiempo real  →", lambda: self.app.show("stream"), "primary", width=220)
         self.status = ctk.CTkLabel(bar, text="", font=T.font(12), text_color=T.MUTED)
         self.status.pack(side="left", padx=14)
 
@@ -80,14 +81,14 @@ class BatchPage(Page):
                                    segmented_button_selected_hover_color=T.PRIMARY_HOVER,
                                    segmented_button_unselected_color="#6B7F9E",
                                    segmented_button_unselected_hover_color="#58698A",
-                                   text_color="white", height=900)
+                                   text_color="white", height=860, command=self._on_tab)
         self.pad(self.tabs)
-        for name in ("1 · Carga", "2 · Limpieza", "3 · EDA", "4 · Gráficas"):
+        for name in ("1 · Carga", "2 · Limpieza", "3 · EDA", "4 · Dashboard"):
             self.tabs.add(name)
         self._build_load(self.tabs.tab("1 · Carga"))
         self._build_clean(self.tabs.tab("2 · Limpieza"))
         self._build_eda(self.tabs.tab("3 · EDA"))
-        self._build_viz(self.tabs.tab("4 · Gráficas"))
+        self._build_viz(self.tabs.tab("4 · Dashboard"))
         self._load_saved()
 
     # ------------------------------------------------------------ pestañas
@@ -120,9 +121,6 @@ class BatchPage(Page):
             anchor="w", pady=(4, 6))
         self.k_clean = self._kpis(p, [("Filas antes", T.MUTED), ("Filas después", T.GREEN),
                                       ("Filas descartadas", T.RED), ("Columnas nuevas", T.PURPLE)])
-        W.concept(p, "Por qué limpiamos", "Los datos reales llegan con errores: 'LEVE', 'leve' y 'Leve' son la misma "
-                  "categoría; 'N/A' no es un valor; las fechas vienen como texto. Si no las normalizamos, los conteos "
-                  "salen mal.", icon="", color=T.GREEN).pack(fill="x", pady=(0, 10))
         W.CodeBox(p, CODE_CLEAN, height=135).pack(fill="x", pady=(0, 10))
         self.t_clean = W.Table(p, ["Paso de limpieza", "Antes", "Después", "Afectadas"], height=4,
                                widths=[360, 100, 100, 100])
@@ -154,21 +152,44 @@ class BatchPage(Page):
         self.t_rdd.pack(fill="x", pady=4)
 
     def _build_viz(self, p):
-        ctk.CTkLabel(p, text="Visualización de resultados", font=T.font(15, "bold"), text_color=T.TEXT).pack(
-            anchor="w", pady=(4, 6))
-        self.seg = ctk.CTkSegmentedButton(p, values=CHARTS, command=self.draw_chart, font=T.font(11),
-                                          selected_color=T.ACCENT, selected_hover_color="#A04E14",
-                                          unselected_color="#6B7F9E", unselected_hover_color="#58698A",
-                                          fg_color=T.BORDER, text_color="white")
-        self.seg.pack(fill="x", pady=(0, 10))
-        self.chart = W.Chart(p, height=380)
-        self.chart.pack(fill="x")
-        self.insight = W.concept(p, "Cómo leer esta gráfica", "Ejecuta el procesamiento para ver resultados.",
-                                 icon="", color=T.ACCENT)
-        self.insight.pack(fill="x", pady=10)
-        self._insight_lbl = self.insight.winfo_children()[1].winfo_children()[1]
+        bar = ctk.CTkFrame(p, fg_color="transparent")
+        bar.pack(fill="x", pady=(2, 8))
+        ctk.CTkLabel(bar, text="Dashboard de resultados", font=T.font(15, "bold"), text_color=T.TEXT).pack(side="left")
+        W.button(bar, "Exportar tablas (CSV)", self.export_csv, "ghost", width=170).pack(side="right")
+        W.button(bar, "Exportar gráficas (PNG)", self.export_png, "ghost", width=190).pack(side="right", padx=8)
+
+        self.k_dash = self._kpis(p, [("Casos analizados", T.PRIMARY), ("Pico mensual", T.ACCENT),
+                                     ("Fallecidos (% de casos)", T.RED), ("Edad media (años)", T.GREEN),
+                                     ("Hombres / mujeres", T.PURPLE)])
+        grid = ctk.CTkFrame(p, fg_color="transparent")
+        grid.pack(fill="x")
+        grid.columnconfigure((0, 1), weight=1, uniform="d")
+        self.dash = {}
+        layout = [("mes", 0, 0, 2, 280), ("dep", 1, 0, 1, 300), ("edad", 1, 1, 1, 300),
+                  ("letal", 2, 0, 1, 280), ("sexo", 2, 1, 1, 280), ("contagio", 3, 0, 1, 260), ("estado", 3, 1, 1, 260)]
+        for key, row, col, span, h in layout:
+            ch = W.Chart(grid, height=h)
+            ch.grid(row=row, column=col, columnspan=span, sticky="nsew", padx=(0 if col == 0 else 4, 4 if col == 0 and span == 1 else 0),
+                    pady=4)
+            self.dash[key] = ch
 
     # ---------------------------------------------------------- ejecución
+    TAB_HEIGHTS = {"1 · Carga": 800, "2 · Limpieza": 880, "3 · EDA": 880, "4 · Dashboard": 1540}
+
+    def _on_tab(self):
+        self.tabs.configure(height=self.TAB_HEIGHTS.get(self.tabs.get(), 880))
+
+    def on_show(self):
+        self._sync_run()
+
+    def _sync_run(self):
+        if not C.DATASET_CSV.exists():
+            self.btn.configure(text="Primero descargue el dataset  →", command=lambda: self.app.show("data"))
+        elif not (self.job and self.job.running):
+            self.btn.configure(text="Ejecutar procesamiento batch", command=self.run)
+        if C.BATCH_RESULT.exists():
+            self.btn_next.pack(side="left", padx=(10, 0))
+
     def run(self):
         if not C.DATASET_CSV.exists():
             self.status.configure(text="Primero descarga el dataset (paso 1).", text_color=T.YELLOW)
@@ -208,9 +229,10 @@ class BatchPage(Page):
                 for c in self.chips:
                     c.configure(fg_color="#1B5E46", text_color="white")
                 self._load_saved()
-                self.status.configure(text=f"Listo en {self.res['elapsed_s']} s — revisa las pestañas.",
+                self.status.configure(text=f"Procesamiento completado en {self.res['elapsed_s']} s.",
                                       text_color=T.GREEN)
                 self.app.refresh_status()
+                self._sync_run()
             else:
                 self.status.configure(text="El procesamiento falló: revisa el registro.", text_color=T.RED)
 
@@ -247,59 +269,76 @@ class BatchPage(Page):
         self.t_dep.fill([(d["k"], W.fmt(d["n"])) for d in r["top_departamentos"]])
         self.t_rdd.fill([(d["k"], W.fmt(d["n"])) for d in r["rdd_top"]]
                         or [("(los workers Python no arrancaron)", "—")])
-        self.seg.set(CHARTS[0])
-        self.draw_chart(CHARTS[0])
+        self.draw_dashboard()
 
-    def draw_chart(self, name):
+    def draw_dashboard(self):
         r = self.res
         if not r:
             return
         P = T.CHART_COLORS
+        n = r["clean_rows"]
+        serie = r["serie_mensual"]
+        peak = max(serie, key=lambda x: x["n"])
+        estados = {x["k"]: x["n"] for x in r["por_estado"]}
+        sexo = {x["k"]: x["n"] for x in r["por_sexo"]}
+        media = next((float(x["edad_anios"]) for x in r["describe_edad"] if x["summary"] == "mean"), 0)
+        self.k_dash[0].set(W.fmt(n))
+        self.k_dash[1].set(f"{peak['k']}  ({W.fmt(peak['n'])})")
+        self.k_dash[2].set(f"{estados.get('Fallecido', 0) / n:.1%}")
+        self.k_dash[3].set(f"{media:.1f}")
+        self.k_dash[4].set(f"{sexo.get('M', 0) / n:.0%} / {sexo.get('F', 0) / n:.0%}")
 
-        def bars(rows, color, key="n", horizontal=True):
-            labels = [str(x["k"]) if x["k"] is not None else "Sin dato" for x in rows]
-            vals = [x[key] for x in rows]
-            return (lambda ax: W.hbar(ax, labels, vals, color)) if horizontal else (
-                lambda ax: ax.bar(labels, vals, color=color))
+        def label(x):
+            return str(x["k"]) if x["k"] is not None else "Sin dato"
 
-        if name == "Casos por mes":
-            s = r["serie_mensual"]
-            peak = max(s, key=lambda x: x["n"])
+        def hb(rows, color):
+            return lambda ax: W.hbar(ax, [label(x) for x in rows], [x["n"] for x in rows], color)
 
-            def f(ax):
-                ax.fill_between(range(len(s)), [x["n"] for x in s], color=T.PRIMARY, alpha=0.25)
-                ax.plot([x["n"] for x in s], color=T.PRIMARY, linewidth=2)
-                step = max(1, len(s) // 10)
-                ax.set_xticks(range(0, len(s), step), [s[i]["k"] for i in range(0, len(s), step)], rotation=35)
-            self.chart.draw(f, "Casos confirmados por mes de notificación")
-            txt = f"Cada punto es un mes. El pico fue {peak['k']} con {W.fmt(peak['n'])} casos: así se ven las 'olas'."
-        elif name == "Departamentos":
-            self.chart.draw(bars(r["top_departamentos"], P[1]), "Departamentos con más casos")
-            top = r["top_departamentos"][0]
-            txt = f"{top['k']} concentra {top['n'] / r['clean_rows']:.0%} de los casos de la muestra: población y densidad."
-        elif name == "Ciudades":
-            self.chart.draw(bars(r["top_ciudades"], P[2]), "Ciudades con más casos")
-            txt = "Las grandes capitales dominan: Spark agrupó los registros por municipio con groupBy + count."
-        elif name == "Sexo":
-            d = r["por_sexo"]
-            self.chart.draw(lambda ax: (ax.pie([x["n"] for x in d], labels=[{"M": "Hombres", "F": "Mujeres"}[x["k"]] for x in d],
-                                               colors=[P[0], P[3]], autopct="%1.1f%%", textprops={"color": T.TEXT},
-                                               wedgeprops={"width": 0.45, "edgecolor": T.CARD}), ax.grid(False)),
-                            "Casos por sexo")
-            txt = "Un gráfico de anillo muestra proporciones: aquí la diferencia entre hombres y mujeres es pequeña."
-        elif name == "Grupos de edad":
-            self.chart.draw(bars(r["por_grupo_edad"], P[0], horizontal=False), "Casos por grupo de edad")
-            top = max(r["por_grupo_edad"], key=lambda x: x["n"])
-            txt = f"El grupo de {top['k']} años acumula más casos: la población activa se contagió más."
-        elif name == "Letalidad por edad":
-            d = r["fallecidos_por_grupo"]
-            self.chart.draw(lambda ax: (ax.bar([x["k"] for x in d], [x["pct"] for x in d], color=T.RED),
-                                        ax.set_ylabel("% fallecidos")), "% de casos fallecidos por grupo de edad")
-            txt = "Aunque hay menos casos en adultos mayores, el porcentaje de fallecidos crece con la edad."
-        elif name == "Tipo de contagio":
-            self.chart.draw(bars(r["por_contagio"], P[4]), "Fuente del contagio")
-            txt = "Predomina la transmisión comunitaria; los casos importados fueron los primeros de 2020."
-        else:
-            self.chart.draw(bars(r["por_estado"], P[5]), "Estado del caso")
-            txt = "La mayoría de casos fueron leves. Las categorías se unificaron en la fase de limpieza."
-        self._insight_lbl.configure(text=txt)
+        def mes(ax):
+            ax.fill_between(range(len(serie)), [x["n"] for x in serie], color=P[0], alpha=0.18)
+            ax.plot([x["n"] for x in serie], color=P[0], linewidth=2)
+            step = max(1, len(serie) // 12)
+            ax.set_xticks(range(0, len(serie), step), [serie[i]["k"] for i in range(0, len(serie), step)], rotation=35)
+
+        edad = r["por_grupo_edad"]
+        let = r["fallecidos_por_grupo"]
+        self.dash["mes"].draw(mes, "Casos confirmados por mes de notificación")
+        self.dash["dep"].draw(hb(r["top_departamentos"], P[1]), "Top departamentos por número de casos")
+        self.dash["edad"].draw(lambda ax: ax.bar([x["k"] for x in edad], [x["n"] for x in edad], color=P[0]),
+                               "Casos por grupo de edad")
+        self.dash["letal"].draw(lambda ax: ax.bar([x["k"] for x in let], [x["pct"] for x in let], color=P[5]),
+                                "% de fallecidos por grupo de edad")
+        self.dash["sexo"].draw(lambda ax: (ax.pie([x["n"] for x in r["por_sexo"]],
+                                                  labels=[{"M": "Hombres", "F": "Mujeres"}.get(x["k"], x["k"]) for x in r["por_sexo"]],
+                                                  colors=[P[0], P[1]], autopct="%1.1f%%", textprops={"color": T.TEXT, "fontsize": 9},
+                                                  wedgeprops={"width": 0.45, "edgecolor": "white"}), ax.grid(False)),
+                               "Distribución por sexo")
+        self.dash["contagio"].draw(hb(r["por_contagio"], P[2]), "Fuente del contagio")
+        self.dash["estado"].draw(hb(r["por_estado"], P[3]), "Estado del caso")
+
+    # ------------------------------------------------------------ exportar
+    def export_png(self):
+        if not self.res:
+            return
+        folder = filedialog.askdirectory(title="Carpeta donde guardar las gráficas")
+        if folder:
+            for key, ch in self.dash.items():
+                ch.fig.savefig(f"{folder}/grafica_{key}.png", dpi=150, facecolor="white")
+            self.status.configure(text=f"{len(self.dash)} gráficas exportadas a {folder}", text_color=T.GREEN)
+
+    def export_csv(self):
+        if not self.res:
+            return
+        folder = filedialog.askdirectory(title="Carpeta donde guardar las tablas")
+        if not folder:
+            return
+        tablas = {"serie_mensual": "serie_mensual", "top_departamentos": "top_departamentos",
+                  "por_grupo_edad": "por_grupo_edad", "fallecidos_por_grupo": "fallecidos_por_grupo",
+                  "por_contagio": "por_contagio", "por_estado": "por_estado"}
+        for key, name in tablas.items():
+            rows = self.res[key]
+            with open(f"{folder}/{name}.csv", "w", newline="", encoding="utf-8-sig") as fh:
+                w = csv.DictWriter(fh, fieldnames=list(rows[0].keys()))
+                w.writeheader()
+                w.writerows(rows)
+        self.status.configure(text=f"{len(tablas)} tablas exportadas a {folder}", text_color=T.GREEN)

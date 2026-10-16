@@ -27,11 +27,13 @@ class Card(ctk.CTkFrame):
 
 def title(master, text, sub=None):
     box = ctk.CTkFrame(master, fg_color="transparent")
-    ctk.CTkLabel(box, text=text, font=T.font(22, "bold"), text_color=T.PRIMARY, anchor="w").pack(anchor="w")
+    ctk.CTkLabel(box, text="UNAD  /  Big Data  /  " + (text.split(" · ")[-1] if len(text) < 48 else "Inicio"), font=T.font(10), text_color=T.MUTED,
+                 anchor="w").pack(anchor="w")
+    ctk.CTkLabel(box, text=text, font=T.font(20, "bold"), text_color=T.TEXT, anchor="w").pack(anchor="w")
     if sub:
         ctk.CTkLabel(box, text=sub, font=T.font(12), text_color=T.MUTED, anchor="w",
                      justify="left", wraplength=900).pack(anchor="w", pady=(2, 0))
-    ctk.CTkFrame(box, height=3, fg_color=T.YELLOW_UNAD, corner_radius=0).pack(fill="x", pady=(10, 0))
+    ctk.CTkFrame(box, height=1, fg_color=T.BORDER, corner_radius=0).pack(fill="x", pady=(10, 0))
     return box
 
 
@@ -121,6 +123,7 @@ class Table(ctk.CTkFrame):
         for i, c in enumerate(columns):
             self.tree.heading(c, text=c)
             self.tree.column(c, width=(widths[i] if widths else 120), anchor="w", stretch=True)
+        self.tree.tag_configure("odd", background="#F2F6FB")
         sb = ttk.Scrollbar(self, orient="horizontal", command=self.tree.xview)
         self.tree.configure(xscrollcommand=sb.set)
         self.tree.pack(fill="both", expand=True, padx=4, pady=(4, 0))
@@ -128,8 +131,9 @@ class Table(ctk.CTkFrame):
 
     def fill(self, rows: Iterable[Sequence]):
         self.tree.delete(*self.tree.get_children())
-        for r in rows:
-            self.tree.insert("", "end", values=["" if v is None else v for v in r])
+        for i, r in enumerate(rows):
+            self.tree.insert("", "end", values=["" if v is None else v for v in r],
+                             tags=("odd",) if i % 2 else ())
 
 
 class Chart(ctk.CTkFrame):
@@ -137,7 +141,7 @@ class Chart(ctk.CTkFrame):
 
     def __init__(self, master, height=300):
         super().__init__(master, fg_color=T.CARD, corner_radius=T.RADIUS, border_width=1, border_color=T.BORDER)
-        self.fig = Figure(figsize=(6, height / 100), dpi=100, facecolor=T.CARD)
+        self.fig = Figure(figsize=(6, height / 100), dpi=100, facecolor=T.CARD, layout="constrained")
         self.ax = self.fig.add_subplot(111)
         self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().configure(bg=T.CARD, highlightthickness=0)
@@ -164,7 +168,6 @@ class Chart(ctk.CTkFrame):
         self._style()
         if title_text:
             self.ax.set_title(title_text, fontsize=10, fontweight="bold", color=T.TEXT, loc="left", pad=10)
-        self.fig.tight_layout()
         self.canvas.draw_idle()
 
 

@@ -27,11 +27,6 @@ class HomePage(Page):
         self.pad(W.title(self, "Procesamiento de datos de gran volumen con Apache Spark y Kafka",
                          f"{C.COURSE}  ·  {C.STUDENT}"), pady=(24, 14))
 
-        self.pad(W.concept(
-            self, "Descripción del trabajo",
-            "Aplicación desarrollada en Python que implementa el componente práctico de la actividad: se selecciona un "
-            "problema, se procesa un conjunto de datos de gran volumen en batch con Spark (PySpark) y, después, se "
-            "simula la llegada de datos en tiempo real mediante un topic de Kafka consumido por Spark Streaming."))
 
         ctk.CTkLabel(self, text="Etapas del trabajo", font=T.font(14, "bold"), text_color=T.TEXT, anchor="w").grid(
             column=0, padx=28, pady=(6, 6), sticky="w")
@@ -52,11 +47,6 @@ class HomePage(Page):
             W.button(row, "Abrir", lambda k=key: self.app.show(k), "ghost", width=90).grid(
                 row=0, column=3, rowspan=2, padx=(0, 14))
 
-        self.pad(W.concept(
-            self, "Tecnologías utilizadas",
-            "Python 3.12 · PySpark 4 (RDD, DataFrames y Spark SQL) · Spark Structured Streaming · Apache Kafka 3.7 "
-            "(modo KRaft) · kafka-python · CustomTkinter y Matplotlib para la interfaz y las gráficas.",
-            color=T.MUTED), pady=(6, 14))
 
     def on_show(self):
         self.refresh()

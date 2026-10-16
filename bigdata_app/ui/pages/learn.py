@@ -35,7 +35,7 @@ class LearnPage(Page):
     key = "learn"
 
     def build(self):
-        self.pad(W.title(self, "Glosario", "Conceptos que se usan en el trabajo."), pady=(24, 14))
+        self.pad(W.title(self, "Glosario"), pady=(24, 14))
         card = W.Card(self)
         self.pad(card)
         card.columnconfigure(1, weight=1)

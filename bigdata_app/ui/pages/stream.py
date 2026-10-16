@@ -39,15 +39,7 @@ class StreamPage(Page):
         self.producer = Producer()
         self.job: Job | None = None
         self.kafka_ok = False
-        self.pad(W.title(self, "3 · Tiempo real: Kafka + Spark Streaming",
-                         "Un generador publica casos nuevos en un topic de Kafka; Spark los consume por micro-lotes y "
-                         "actualiza estadísticas al instante."), pady=(24, 12))
-        self.pad(W.concept(
-            self, "La tubería en tiempo real",
-            "Productor (generador de datos)  →  Topic de Kafka (cola de mensajes ordenada y durable)  →  "
-            "Spark Structured Streaming (lee el topic en micro-lotes de 3 s)  →  Resultados en este panel.\n"
-            "Kafka desacopla a quien genera datos de quien los procesa: si Spark se detiene, los mensajes esperan en el topic.",
-            icon="", color=T.PURPLE))
+        self.pad(W.title(self, "3 · Tiempo real: Kafka + Spark Streaming"), pady=(24, 12))
 
         # -------------------------------------------------- pasos de control
         steps = ctk.CTkFrame(self, fg_color="transparent")
@@ -87,7 +79,7 @@ class StreamPage(Page):
         self.bar = ctk.CTkProgressBar(self, height=8, progress_color=T.PRIMARY, fg_color=T.CARD_ALT)
         self.bar.set(0)
         self.pad(self.bar, pady=(0, 6))
-        self.msg = ctk.CTkLabel(self, text="Siga los pasos 1, 2 y 3 en orden. La primera vez Spark descarga el conector de Kafka (~1 min).",
+        self.msg = ctk.CTkLabel(self, text="",
                                 font=T.font(12), text_color=T.MUTED, anchor="w")
         self.pad(self.msg, pady=(0, 10))
 
@@ -172,7 +164,13 @@ class StreamPage(Page):
         self.kafka_ok = up
         self.lbl_kafka.configure(text="En línea · 127.0.0.1:9092" if up else "Detenido",
                                  text_color=T.GREEN if up else T.RED)
-        self.btn_kafka.configure(state="normal", text="Iniciar Kafka + topic")
+        self.btn_kafka.configure(state="disabled" if up else "normal",
+                                 text="Kafka en ejecución" if up else "Iniciar Kafka + topic")
+        # Guía por flujo: los pasos 2 y 3 se habilitan solo cuando Kafka está en línea.
+        gated = "normal" if up else "disabled"
+        self.btn_prod.configure(state=gated)
+        self.btn_spark.configure(state=gated)
+        self.btn_kafka_stop.configure(state=gated)
 
     # ------------------------------------------------------------ productor
     def toggle_producer(self, force_stop=False):

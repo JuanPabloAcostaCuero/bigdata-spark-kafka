@@ -24,8 +24,7 @@ class DataPage(Page):
     key = "data"
 
     def build(self):
-        self.pad(W.title(self, "1 · Problema y conjunto de datos",
-                         "Todo proyecto de Big Data empieza con una pregunta clara y datos que ayuden a responderla."),
+        self.pad(W.title(self, "1 · Problema y conjunto de datos"),
                  pady=(24, 12))
 
         prob = W.Card(self)
@@ -44,12 +43,6 @@ class DataPage(Page):
                          justify="left", wraplength=860).pack(anchor="w", padx=22, pady=1)
         ctk.CTkLabel(prob, text="").pack(pady=2)
 
-        self.pad(W.concept(
-            self, "¿Por qué este dataset es 'Big Data'?",
-            "La fuente completa supera los 6,3 millones de registros con 23 columnas, datos reales y sucios "
-            "(mayúsculas inconsistentes, 'N/A', fechas como texto). Es justo el tipo de volumen y calidad donde "
-            "Spark brilla: distribuye el trabajo entre los núcleos del equipo y lo procesa en paralelo.",
-            icon="", color=T.ACCENT))
 
         src = W.Card(self)
         self.pad(src)
@@ -71,6 +64,8 @@ class DataPage(Page):
         self.size.pack(side="left", padx=10)
         self.btn = W.button(ctl, "Descargar dataset", self.download, "accent", width=200)
         self.btn.pack(side="left")
+        self.btn_next = W.button(ctl, "Continuar: Procesamiento batch  →", lambda: self.app.show("batch"),
+                                 "primary", width=260)
         self.bar = ctk.CTkProgressBar(src, height=10, progress_color=T.ACCENT, fg_color=T.CARD_ALT)
         self.bar.set(0)
         self.bar.pack(fill="x", padx=18, pady=(8, 4))
@@ -96,6 +91,7 @@ class DataPage(Page):
             self.table.fill(df[self.cols].values.tolist())
             n = sum(1 for _ in open(C.DATASET_CSV, "rb")) - 1
             self.msg.configure(text=f"Dataset local: {W.fmt(n)} filas listas para procesar.", text_color=T.GREEN)
+            self.btn_next.pack(side="left", padx=10)
 
     def download(self):
         n = SIZES[self.size.get()]

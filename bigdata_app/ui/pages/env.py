@@ -23,14 +23,8 @@ class EnvPage(Page):
     key = "env"
 
     def build(self):
-        self.pad(W.title(self, "Entorno de trabajo",
-                         "Antes de procesar datos necesitamos Java, Spark y Kafka. Aquí los verificas e instalas "
-                         "con un clic — todo se descarga a una carpeta de usuario, sin permisos de administrador."),
+        self.pad(W.title(self, "Entorno de trabajo"),
                  pady=(24, 12))
-        self.pad(W.concept(self, "¿Por qué Java si programamos en Python?",
-                           "Apache Spark está escrito en Scala y se ejecuta en la JVM (Java Virtual Machine). PySpark "
-                           "es un puente: tu código Python envía órdenes a la JVM, que reparte el trabajo en tareas "
-                           "paralelas. Kafka también corre en la JVM."))
 
         self.rows = {}
         card = W.Card(self)
