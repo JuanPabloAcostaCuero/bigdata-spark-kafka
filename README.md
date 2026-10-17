@@ -43,3 +43,7 @@ bigdata_app/
 - El worker de Python de Spark se lanza con un script propio (`engine/runtime.py`, `worker_launcher`): con `python -m pyspark.worker` los RDD fallaban de forma intermitente en Windows.
 - La primera vez, Spark Streaming descarga el conector `spark-sql-kafka` desde Maven (1-2 min).
 - El procesamiento batch de 300.000 filas tarda de 1 a 3 minutos según el equipo.
+
+## Documentación
+- [DOCUMENTACION.md](DOCUMENTACION.md): funcionamiento completo de la app y explicación de cada módulo y función.
+- [DATASET.md](DATASET.md): descripción del dataset, problemas encontrados y soluciones implementadas.
