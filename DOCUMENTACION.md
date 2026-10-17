@@ -86,6 +86,7 @@ La aplicación se divide en tres capas. La interfaz **no procesa datos**; solo l
 **Por qué los trabajos de Spark son subprocesos:** Spark arranca una JVM y puede tardar decenas de segundos. Si corriera dentro del proceso de la ventana, esta se congelaría. Como subproceso, la interfaz sigue respondiendo y lee el avance de su salida de texto.
 
 **Cómo se comunican:**
+
 - **Spark → interfaz:** el trabajo imprime líneas con prefijo `@@` (por ejemplo `@@STEP 3|Limpieza…`) que la interfaz interpreta, y escribe los resultados en un archivo JSON.
 - **Hilos → interfaz:** una cola de mensajes (`Bus`) que la ventana vacía cada 120 ms. Tkinter solo permite tocar widgets desde su hilo principal, por eso los hilos nunca modifican la pantalla directamente.
 
