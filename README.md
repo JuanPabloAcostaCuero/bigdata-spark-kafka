@@ -46,4 +46,3 @@ bigdata_app/
 
 ## Documentación
 - [DOCUMENTACION.md](DOCUMENTACION.md): funcionamiento completo de la app y explicación de cada módulo y función.
-- [DATASET.md](DATASET.md): descripción del dataset, problemas encontrados y soluciones implementadas.
